@@ -168,7 +168,7 @@ if args.u > 1 and args.r:
 if args.u > 1 and args.b:
   print("Bootloading expansion units is a work in progress...")
 
-if not args.b:
+if not args.b and len(preamps.preamps) > args.u:
   for u in range(len(preamps.preamps)):
     preamps.force_fans(preamp = u + 1, force = args.f)
   preamps.led_override(preamp = args.u, leds = args.l)

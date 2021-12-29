@@ -7,7 +7,7 @@ The AmpliPi design is entirely open source, from the software, to the firmware, 
 
 The system is self-hosted on the Raspberry Pi and is privacy-centric. By design, AmpliPi doesn’t listen to you or spy on you — it just plays your audio! The way it should be. An internet connection is only needed for some external streaming sources, such as Pandora. The Python application running on the Pi hosts a mobile-friendly website and REST API used to control the system. The website is built on top of the REST API.
 
-![High-level Schematic](docs/imgs/Signal_Diagram_with_Expansion_Out.png)
+![High-level Schematic](hw/diagrams/signal_diagram.drawio.svg)
 
 Check us out on [Kickstarter](https://www.kickstarter.com/projects/micro-nova/amplipi-home-audio-system)!
 
@@ -83,3 +83,24 @@ Not quite sure how to accomplish this? No problem - The AmpliPi controller hosts
 [coverage-badge]:  https://codecov.io/github/micro-nova/AmpliPi/coverage.svg?branch=master
 [coverage-link]:   https://codecov.io/github/micro-nova/AmpliPi?branch=master
 [license-badge]:   https://img.shields.io/badge/License-GPL%20v3-blue.svg
+
+## Updates and Releases
+Releases are available on [GitHub](https://github.com/micro-nova/AmpliPi/releases), see [CHANGELOG.md](CHANGELOG.md)
+for the changes in each release.
+
+To update you AmpliPi to the latest version:
+1. Go to the web app at [amplipi.local](http://amplipi.local).
+1. Click the gear icon (⚙) in the upper right corner to go to the configuration page
+1. Select **Updates** and click the **Check for Updates** button
+1. Click the **Update** button
+
+If you don't see an update button, you have an older version of AmpliPi. It will take a couple more steps to update this time around.
+1. Download this [update](https://github.com/micro-nova/AmpliPi/releases/download/0.1.7/amplipi-update-0.1.7.tar.gz).
+1. Click the browse button to select the downloaded amplipi-update-0.1.7.tar.gz file.
+1. Click upload software to start the update, when it is finished it will navigate to the updated web app.
+1. Please be patient, updates can take 10-15 minutes and progress info will be reported slowly.
+1. The update will mistakenly fail with the message "`Error checking version: NetworkError when attempting to fetch resource`". Just go back to the app at [amplipi.local](http://amplipi.local) to enjoy the new feaures.
+
+For custom changes or offline updating, a .tar.gz file can also be uploaded
+to the AmpliPi. This can be generated from a git checkout with
+`poetry version prerelease && poetry build`. The release will be generated to the dist folder.

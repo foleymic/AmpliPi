@@ -105,12 +105,7 @@ class Api:
     # NOTE: streams and groups seem like they should be stored as dictionaries with integer keys
     #       this does not make sense because JSON only allows string based keys
     "streams": [
-      # an example for each type of stream
-      {"id": 1000, "name": "AmpliPi", "type": "shairport"},
-      {"id": 1001, "name": "Radio Station, needs user/pass/station-id", "type": "pandora", "user": "change@me.com", "password": "CHANGEME", "station": "CHANGEME"},
-      {"id": 1002, "name": "AmpliPi", "type": "spotify"},
-      {"id": 1003, "name": "Groove Salad", "type": "internetradio", "url": "http://ice6.somafm.com/groovesalad-32-aac", "logo": "https://somafm.com/img3/groovesalad-400.jpg"},
-      {"id": 1004, "name": "AmpliPi", "type": "dlna"}
+      {"id": 1000, "name": "Groove Salad", "type": "internetradio", "url": "http://ice6.somafm.com/groovesalad-32-aac", "logo": "https://somafm.com/img3/groovesalad-400.jpg"},
     ],
     "zones": [ # this is an array of zones, array length depends on # of boxes connected
       {"id": 0, "name": "Zone 1", "source_id": 0, "mute": True, "disabled": False, "vol": -79},
@@ -120,11 +115,7 @@ class Api:
       {"id": 4, "name": "Zone 5", "source_id": 0, "mute": True, "disabled": False, "vol": -79},
       {"id": 5, "name": "Zone 6", "source_id": 0, "mute": True, "disabled": False, "vol": -79},
     ],
-    # TODO: make groups a dictionary
-    "groups": [ # this is an array of groups that have been created , each group has a friendly name and an array of member zones
-      {"id": 100, "name": "Group 1", "zones": [1, 2], "source_id": 0, "mute": True, "vol_delta": -79},
-      {"id": 101, "name": "Group 2", "zones": [3, 4], "source_id": 0, "mute": True, "vol_delta": -79},
-      {"id": 102, "name": "Group 3", "zones": [5], "source_id": 0, "mute": True, "vol_delta": -79},
+    "groups": [
     ],
     "presets" : [
       {"id": 10000,
@@ -141,19 +132,6 @@ class Api:
           ]
         }
       },
-      # We need this for testing
-      {"id": 10001,
-        "name": "Play Pandora",
-        "state" : {
-          "sources" : [
-            {"id": 1, "input": "stream=1001"},
-          ],
-          "groups" : [
-            {"id": 100, "source_id": 1},
-            {"id": 101, "source_id": 1},
-          ]
-        }
-      }
     ]
   }
   # TODO: migrate to init setting instance vars to a disconnected state (API requests will throw Api.DisconnectedException() in this state
@@ -223,6 +201,25 @@ class Api:
       version=utils.detect_version()
     )
 
+    # TODO: detect missing sources
+
+    # detect missing zones
+    if self._mock_hw:
+      # only allow 6 zones when mocked to simplify testing
+      # add more if needed by specifying them in the config
+      potential_zones = range(6)
+    else:
+      potential_zones = range(rt.MAX_ZONES)
+    added_zone = False
+    for zid in potential_zones:
+      _, zone = utils.find(self.status.zones, zid)
+      if zone is None and self._rt.exists(zid):
+        added_zone = True
+        self.status.zones.append(models.Zone(id=zid, name=f'Zone {zid+1}'))
+    # save new config if zones were added
+    if added_zone:
+      self.save()
+
     # configure all streams into a known state
     self.streams: Dict[int, amplipi.streams.AnyStream] = {}
     failed_streams: List[int] = []
@@ -245,7 +242,8 @@ class Api:
     # configure all of the zones so that they are in a known state
     #   we mute all zones on startup to keep audio from playing immediately at startup
     for zone in self.status.zones:
-      # TODO: disable zones that are not found and add zones that are found
+      # TODO: disable zones that are not found
+      # we likely need an additional field for this, maybe auto-disabled?
       zone_update = models.ZoneUpdate(source_id=zone.source_id, mute=True, vol=zone.vol)
       self.set_zone(zone.id, zone_update, force_update=True, internal=True)
     # configure all of the groups (some fields may need to be updated)

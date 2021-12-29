@@ -22,7 +22,7 @@ import math
 import io
 import os
 import time
-import amplipi.extras as extras
+from enum import Enum
 
 from typing import Dict, List, Tuple, Union
 
@@ -54,6 +54,9 @@ _REG_ADDRS = {
   'AMP_TEMP1'       : 0x11,
   'HV1_TEMP'        : 0x12,
   'AMP_TEMP2'       : 0x13,
+  'PI_TEMP'         : 0x14,
+  'FAN_DUTY'        : 0x15,
+  'FAN_VOLTS'       : 0x16,
   'VERSION_MAJOR'   : 0xFA,
   'VERSION_MINOR'   : 0xFB,
   'GIT_HASH_27_20'  : 0xFC,
@@ -66,6 +69,14 @@ _SRC_TYPES = {
   0 : 'Analog',
 }
 _DEV_ADDRS = [0x08, 0x10, 0x18, 0x20, 0x28, 0x30]
+
+MAX_ZONES = 6 * len(_DEV_ADDRS)
+
+class FanCtrl(Enum):
+  MAX6644 = 0
+  PWM     = 1
+  LINEAR  = 2
+  FORCED  = 3
 
 def is_amplipi():
   """ Check if the current hardware is an AmpliPi
@@ -277,7 +288,7 @@ class _Preamps:
     return None, None, None, None
 
   def read_power_status(self, preamp: int = 1) -> Tuple[Union[bool, None],
-    Union[bool, None], Union[bool, None], Union[bool, None]]:
+    Union[bool, None], Union[bool, None], Union[bool, None], Union[float, None]]:
     """ Read the status of the power supplies
 
       Returns:
@@ -285,6 +296,7 @@ class _Preamps:
         en_9v:    True if the 9V rail is enabled
         pg_12v:   True if the 12V rail is good
         en_12v:   True if the 12V rail is enabled
+        v12:      Fan power supply voltage, nominally 12V
     """
     assert 1 <= preamp <= 6
     if self.bus is not None:
@@ -293,30 +305,42 @@ class _Preamps:
       pg_12v = (pstat & 0x04) != 0
       en_9v = (pstat & 0x02) != 0
       pg_9v = (pstat & 0x01) != 0
-      return pg_9v, en_9v, pg_12v, en_12v
-    return None, None, None, None
+      fvstat = self.bus.read_byte_data(preamp*8, _REG_ADDRS['FAN_VOLTS'])
+      v12 = fvstat / 2**4
+      return pg_9v, en_9v, pg_12v, en_12v, v12
+    return None, None, None, None, None
 
-  def read_fan_status(self, preamp: int = 1) -> Tuple[Union[bool, None],
-    Union[bool, None], Union[bool, None], Union[bool, None], Union[bool, None]]:
+  def read_fan_status(self, preamp: int = 1) -> Tuple[Union[FanCtrl, None],
+    Union[bool, None], Union[bool, None], Union[bool, None]]:
     """ Read the status of the fans
 
       Returns:
-        override:  True if the fans have been forced on
+        ctrl:      Fan control method currently in use
         fans_on:   True if the fans are on
-        ctrl       Fan control method currently in use - True if ON/OFF, False if MAX6644
         ovr_tmp:   True if the amplifiers or PSU are overtemp
         failed:    True if the fans failed (only available on developer units)
     """
     assert 1 <= preamp <= 6
     if self.bus is not None:
       fstat = self.bus.read_byte_data(preamp*8, _REG_ADDRS['FANS'])
-      failed = (fstat & 0x20) != 0
-      ovr_tmp = (fstat & 0x10) != 0
-      ctrl = (fstat & 0x0C) != 0
-      fans_on = (fstat & 0x02) != 0
-      override = (fstat & 0x01) != 0
-      return override, fans_on, ctrl, ovr_tmp, failed
-    return None, None, None, None, None
+      ctrl = FanCtrl(fstat & 0x03)
+      fans_on = (fstat & 0x04) != 0
+      ovr_tmp = (fstat & 0x08) != 0
+      failed = (fstat & 0x10) != 0
+      return ctrl, fans_on, ovr_tmp, failed
+    return None, None, None, None
+
+  def read_fan_duty(self, preamp: int = 1) -> Union[float, None]:
+    """ Read the fans' duty cycle
+
+      Returns:
+        duty: 0-100%
+    """
+    assert 1 <= preamp <= 6
+    if self.bus is not None:
+      duty = self.bus.read_byte_data(preamp*8, _REG_ADDRS['FAN_DUTY'])
+      return duty / (1 << 7)
+    return None
 
   @staticmethod
   def _fix2temp(fval: int) -> float:
@@ -370,7 +394,7 @@ class _Preamps:
     assert 1 <= preamp <= 6
     if self.bus is not None:
       self.bus.write_byte_data(preamp*8, _REG_ADDRS['FANS'],
-                               1 if force is True else 0)
+                               3 if force is True else 0)
 
   def read_leds(self, preamp: int = 1):
     """ Read the state of the front-panel LEDs
@@ -410,20 +434,18 @@ class _Preamps:
         self.bus.write_byte_data(preamp*8, _REG_ADDRS['LED_CTRL'], 1)
         self.bus.write_byte_data(preamp*8, _REG_ADDRS['LED_VAL'], leds)
 
-  def print(self):
+  def __str__(self):
+    preamp_str = ''
     for preamp_addr in self.preamps.keys():
+      if preamp_addr > _DEV_ADDRS[0]:
+        preamp_str += '\n'
       preamp = int(preamp_addr / 8)
-      print('preamp {}:'.format(preamp))
-      src_types = self.preamps[0x08][_REG_ADDRS['SRC_AD']]
-      src_cfg = []
-      for src in range(4):
-        src_type = _SRC_TYPES.get((src_types >> src) & 0b01)
-        src_cfg += ['{}'.format(src_type)]
-      print('  [{}]'.format(', '.join(src_cfg)))
+      preamp_str += f'Preamp {preamp}:'
       for zone in range(6):
-        self.print_zone_state(6 * (preamp - 1) + zone)
+        preamp_str += '\n' + self.get_zone_state_str(6 * (preamp - 1) + zone)
+    return preamp_str
 
-  def print_zone_state(self, zone):
+  def get_zone_state_str(self, zone):
     assert zone >= 0
     preamp = (int(zone / 6) + 1) * 8
     zone = zone % 6
@@ -433,10 +455,7 @@ class _Preamps:
     src_type = _SRC_TYPES.get((src_types >> src) & 0b01)
     vol = -regs[_REG_ADDRS['VOL_ZONE1'] + zone]
     muted = (regs[_REG_ADDRS['MUTE']] & (1 << zone)) > 0
-    state = []
-    if muted:
-      state += ['muted']
-    print('  {}({}) --> zone {} vol [{}] {}'.format(src, src_type[0], zone, extras.vol_string(vol), ', '.join(state)))
+    return f'  {src}({src_type[0]}) --> zone {zone} vol {vol}{" (muted)" if muted else ""}'
 
 class Mock:
   """ Mock of an Amplipi Runtime
@@ -655,7 +674,7 @@ class Rpi:
 
   def exists(self, zone):
     if self._bus:
-      preamp = zone // 6
-      return preamp in self._bus.preamps
+      preamp_addr = 8 * (zone // 6 + 1)
+      return preamp_addr in self._bus.preamps
     else:
       return True

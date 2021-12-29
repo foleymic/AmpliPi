@@ -49,7 +49,7 @@ Each of the stereo RCA inputs can be connected to a different audio source, such
 
 ### Power
 
-Plug the unit into an 120V outlet using the supplied power cable. WARNING: if you intend to power AmpliPi with 230V mains, you must set the internal power selector switch to 230V line voltage BEFORE supplying power to the unit. Failure to do this will damage the unit. Please contact amplipi@micro-nova.com before powering up the unit if you have any questions.
+Plug the unit into an 120V outlet using the supplied power cable. WARNING: if you intend to power AmpliPi with 230V mains, you must set the input voltage selector switch to 230V line voltage BEFORE supplying power to the unit. Failure to do this will damage the unit. The input voltage selector switch is located on the right side of the MeanWell PSU inside the AmpliPi. It can be accessed either through the vent slots on the side of the unit or by removing the top cover. For more details and pictures of the process, check out the [guide](https://amplipi.discourse.group/t/setting-your-amplipi-for-230v-operation/69). Please contact amplipi@micro-nova.com before powering up the unit if you have any questions.
 
 Once plugged in, the AmpliPi will start booting. The display will not be driven until the Pi has fully booted and the AmpliPi server has started; this takes about 20 seconds. By default the display will sleep after 60 seconds but can be woken up by a touch.
 

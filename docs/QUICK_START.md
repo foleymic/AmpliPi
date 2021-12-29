@@ -6,12 +6,12 @@ Thanks for supporting AmpliPi, we hope you love your new unit!
 
 We suggest making the speaker connections before connecting AmpliPi to power. Please check out the steps below for more information on how to install your AmpliPi unit.
 
-WARNING!! DO NOT CONNECT UNIT TO 230V MAINS WITHOUT FIRST SETTING INTERNAL MAINS POWER SWITCH see (#power).
+WARNING!! DO NOT CONNECT UNIT TO 230V MAINS WITHOUT FIRST SETTING INTERNAL MAINS POWER SWITCH see [Power](#power).
 
 ### Back Panel
 
 All of the connections will be made to the back panel. Here's a quick reference for each of the different connections:
-- **POWER**: 115V, or optionally 230V connection, 115/230 switch is set on internal power supply and marked on rear of unit, see[Power](#power)
+- **POWER**: 115V, or optionally 230V connection, 115/230 switch is set on internal power supply and marked on rear of unit, see [Power](#power)
 - **CONTROLLER**: Connections to the embedded Raspberry Pi Controller
   - **SERVICE**: USB mini connection for reimaging the Pi's EMMC
   - **USB**:  USB A ports for connecting peripherals such as additional storage devices

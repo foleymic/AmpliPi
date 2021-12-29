@@ -1,7 +1,5 @@
 # Quick Start Guide
 
-![AmpliPi](imgs/amplipi.png)
-
 Thanks for supporting AmpliPi, we hope you love your new unit!
 
 ## Installation
